@@ -1,0 +1,1 @@
+msp430-gcc  -gdwarf-2 -g3 -g -I. -mmcu=msp430g2553 -o main main.c drivers/spi.c drivers/printf.c  drivers/diskio.c drivers/uart.c 
