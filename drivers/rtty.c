@@ -1,7 +1,8 @@
 #include <stdlib.h>
-#include "rtty.h"
-#include "delay.h"
-//#include "utils.h"
+//#include "rtty.h"
+//#include "delay.h"
+#include "pin_config.h"
+#include "utils.h"
 
 void rtty_init()
 {
@@ -38,7 +39,8 @@ void rtty_txbit (int bit)
  //   @1Mhz, delay == 20000 == 50baud
  //   @8Mhz, delay == ? == 50 baud
  	//P1OUT ^= BIT3;
- 	DELAY_US(7000);
+	DELAY_US(20000);// 1/50*1000000 - (1/t)*f
+// 	DELAY_US(7000);
 // 	DELAY_US(15800); //47.5 baud
 }
 
