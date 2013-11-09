@@ -75,7 +75,7 @@ unsigned int bmp085_read_utemperature(void)
 	i2c_stop();
 
 	/* wait at least 4.5ms */
-	_delay_ms(5);
+	DELAY_MS(5);
 
 	ut = bmp085_read_int(0xF6);
 
@@ -107,7 +107,7 @@ unsigned int bmp085_read_upressure(void)
 	i2c_stop();
 
 	/* wait for conversion, depends on oversampling */
-	_delay_ms(2 + (3<<BMP085_OVERSAMPLING));
+	DELAY_MS(2 + (3<<BMP085_OVERSAMPLING));
 
 	/* read register 0xF6 (MSB), 0xF7 (LSB), and 0xF8 (XLSB) */
 	i2c_start();
