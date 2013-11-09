@@ -10,6 +10,7 @@
 #define RTTY_MARK_PIN BIT2 
 #define RTTY_SPACE_PIN BIT1 
 #define RTTY_ENABLE_PIN BIT3 
+#define RTTY_ASCII          8
 
 /* I2C / bmp085 pressure sensor */
 #define I2C_REN	P1REN
