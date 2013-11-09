@@ -12,12 +12,13 @@
 
 
 
-void _delay_ms(unsigned int ms);
+//void _delay_ms(unsigned int ms);
 void blink_led(void);
 
 
+int update_sector_record(int sector);
 void init_sdcard(void);
-int sector_flush(void);
+int sector_flush(int sector);
 int sector_start(int sector);
 void sector_write(char *data);
 void log_to_sdcard(char * data);
