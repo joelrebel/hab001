@@ -20,12 +20,8 @@ void init_uart(void) {
 }
 
 void puts(const char *s) {
-	char c;
-
+while(*s) putc(*s++); 
 	// Loops through each character in string 's'
-	while (c = *s++) {
-		putc(c);
-	}
 }
 
 void putc(unsigned c) {
