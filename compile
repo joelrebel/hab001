@@ -1,1 +1,6 @@
-msp430-gcc -Os -mmcu=msp430g2553 -o main main.c lib/printf.c drivers/uart.c drivers/spi.c drivers/diskio.c drivers/utils.c lib/parse_nmea.c drivers/bmp085.c drivers/i2c_sw.c && sync
+msp430-gcc -Os -gdwarf-2 -g3 -g -I. -mmcu=msp430g2553 -o main main.c lib/printf.c drivers/uart.c drivers/spi.c drivers/diskio.c drivers/utils.c lib/parse_nmea.c drivers/bmp085.c drivers/i2c_sw.c drivers/rtty.c && sync
+if [ $? -ne 0 ];
+then
+	msp430-objdump -DS main > main.objdump	
+	echo "compile failed."
+fi	
