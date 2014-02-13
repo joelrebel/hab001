@@ -13,7 +13,7 @@
 //G2253 - 16KB flash, 512B ram
 //sector 1 of the sdcard stores the last written sector every 10 writes
 
-const char call_sign[]="$$minion1,";
+const char call_sign[]="$$minioncraft,";
 int sector_idx = 2; // this should be a higher type, int with restrict us to sizeof(int) sector writes 
 short int bytes_written=0; //we limit this to a max of 500
 short int sectors_written=0;
@@ -58,11 +58,17 @@ void smclk_p14_out(void){
 }
 
 
+void intro(void){
+	printf("minioncraft 2014 ^0.0^ booting up\n\r");
+    printf("/-------------------------------/\n\r");
+}
+
 void main(void)
 {
 
 	init();
 	init_uart();
+	intro();
 //	ow_portsetup();
 	init_sdcard();
 	rtty_init();
@@ -79,14 +85,22 @@ void main(void)
 		printf("%s", call_sign);
 		log_to_sdcard(call_sign);
 		rtty_txstring(call_sign);
+
+//		sample_gps_data();
 		
 		if (sample_gps_data() == 0 ){
 			for(i=0;i<=9;i++){
-				printf("-%i", i);
+				
+			//	printf("->%i=", i);
+				printf("<%s>,", get_gps_string(i));
+				
 				log_to_sdcard(get_gps_string(i));
 				log_to_sdcard(",");
-				rtty_txstring(strcat(get_gps_string(i), ", "));
-				printf("%s,", get_gps_string(i));
+
+				rtty_txstring(get_gps_string(i));
+				rtty_txstring(",");
+
+
 			}
 
 		}
@@ -108,17 +122,6 @@ void main(void)
 		rtty_txstring("_P");
 		log_to_sdcard(temp_str);
 
-//		log_to_sdcard("_TE,");
-//		rtty_txstring(strcat((bmp085_read_temperature()/10), "_external, "));
-
-
-	//	log_to_sdcard(bmp085_read_pressure()/100); 
-	//	log_to_sdcard("_P");
-
-	//	log_to_sdcard(strcat((bmp085_read_pressure()/100), "_pressure\n"));
-	//	rtty_txstring(strcat((bmp085_read_pressure()/100), "_pressure"));
-		
-		
 		rtty_txstring("\r");
 		log_to_sdcard("|");
 		printf("\n\r");
@@ -282,7 +285,7 @@ void log_to_sdcard(char *data)
 	}
 
 
-
+//	printf("returning fine..\n\r");
 
 }
 
@@ -299,11 +302,11 @@ int sample_gps_data(void){
 			
 //				for(i = 0; i < nbits(gpi[ret - 1].words); i++){
 //
-			//	for(i = 1; i < 9; i++){
-			//		printf("<-%s->", get_gps_string(i));
+//				for(i = 1; i < 9; i++){
+//					printf("<-%s->,", get_gps_string(i));
 //					strcat(data,get_gps_string(i));
 //					if (i != 9){ strcat(data,sep); };
-		//		}
+//				}
 				return 0;
 			}
 		}
