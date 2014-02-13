@@ -1,12 +1,12 @@
-// MSP430G2553		MSP PIN			MMC			   MMC Pin
-// -------------------------------------------------------------
-// P1.7/UCB0SIMO	15				DataIn			2
-// P1.6/UCB0SOMI	14				DataOut			7
-// P2.0				8				ChipSelect		1
-// 									CardDetect		6 #this is connected to an led instead
-// P1.5/UCB0CLK		7				Clock			5
-// 									GND				3 (0V)
-// 									VDD				4 (3.3V)
+// MSP430G2553		MSP PIN			MMC			   SDCARD Pin										Microsd pin
+// --------------------------------------------------------------------------------------------------------
+// P1.7/UCB0SIMO	15				DataIn			2												3
+// P1.6/UCB0SOMI	14				DataOut			7												7
+// P2.0				8				ChipSelect		1												2
+// 									CardDetect		6 #this is connected to an led instead			
+// P1.5/UCB0CLK		7				Clock			5												5
+// 									GND				3 (0V)											6
+// 									VDD				4 (3.3V)										4
 GPS
 
 MSP430G2553 		GPS(Globaltop)
@@ -15,5 +15,18 @@ MSP430G2553 		GPS(Globaltop)
 GND                 GND
 VCC                 VCC
 P1.1 (uart Rx)      TX
+
+MSP430G2553     MSP PIN            BMP085
+==========================================
+P1.3			5					SDA
+P1.5			6					SCL
+
+									NTX2
+==========================================
+P2.1			9				    Space
+P2.2			10					Mark
+P2.3			11					Enable
+
+
 
 
