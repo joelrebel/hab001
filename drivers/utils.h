@@ -22,8 +22,8 @@ int sector_flush(int sector);
 int sector_start(int sector);
 void sector_write(char *data);
 void log_to_sdcard(char * data);
+void float_to_char(float f);
 
-
-int sample_gps_data(void);
+int sample_gps_data(char *what);
 
 #endif

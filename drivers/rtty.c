@@ -20,20 +20,22 @@ void rtty_txbit (int bit)
      * Sends one bit of data
      *
      */
+	
 
-    if (bit)
-    {
-        /* mark */
-        RTTY_PORT |= RTTY_MARK_PIN;
-        RTTY_PORT &= ~(RTTY_SPACE_PIN);
-    }
-    else
-    {
-        /* space */
-        RTTY_PORT |= RTTY_SPACE_PIN;
-        RTTY_PORT &= ~(RTTY_MARK_PIN);
+   if (bit)
+   {
+       /* mark */
+       RTTY_PORT |= RTTY_MARK_PIN;
+       RTTY_PORT &= ~(RTTY_SPACE_PIN);
+   }
+   else
+   {
+       /* space */
+       RTTY_PORT |= RTTY_SPACE_PIN;
+       RTTY_PORT &= ~(RTTY_MARK_PIN);
 
-    }
+   }
+	
 //    __delay_cycles(RTTY_BAUDRATE/2); /* depends on configuration */
  //   __delay_cycles(RTTY_BAUDRATE/2);
  //   @1Mhz, delay == 20000 == 50baud

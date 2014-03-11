@@ -13,14 +13,17 @@
 //G2253 - 16KB flash, 512B ram
 //sector 1 of the sdcard stores the last written sector every 10 writes
 
-const char call_sign[]="$$minioncraft,";
+const char call_sign[]="minioncraft,";
+const char v_buf[5];
 int sector_idx = 2; // this should be a higher type, int with restrict us to sizeof(int) sector writes 
 short int bytes_written=0; //we limit this to a max of 500
 short int sectors_written=0;
+uint8_t crc = 0xffff;
+
 
 static char *i2a(unsigned i, char *a, unsigned r) {
 	if (i / r > 0)
-		a = i2a(i / r, a, r);
+	a = i2a(i / r, a, r);
 	*a = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % r];
 	return a + 1;
 }
@@ -35,6 +38,56 @@ char *itoa(int i, char *a) {
 	return a;
 }
 
+void float_to_char(float f)
+{
+	int integer_part, decimal_part, a, b;
+	a = f * 1000;
+	integer_part = (int)f;
+	b = integer_part*1000;
+	decimal_part = (a - b)/10;
+	
+	sprintf(v_buf, "%d.%d", integer_part, decimal_part);
+}
+
+void crc_ccitt_update(unsigned char x)
+{
+	uint8_t crc_new =  (unsigned char)(crc >> 8) | (crc << 8);
+	crc_new ^= x;
+	crc_new ^= (unsigned char)(crc_new & 0xff) >> 4;
+	crc_new ^= crc_new << 12;
+	crc_new ^= (crc_new & 0xff) << 5;
+	crc = crc_new;
+}
+
+void str_crc_update(char *str)
+{
+	while(*str){
+		crc_ccitt_update(*str++); 
+	}
+}
+
+void init_adc()
+{
+	ADC10CTL0 = SREF_1 + REFON + REF2_5V + ADC10ON + ADC10SHT_3;
+	ADC10CTL1 = INCH_11 + ADC10DIV_3;
+}
+
+
+void measure_vcc(){
+	int value;
+	float voltage;
+	ADC10CTL0 |= ENC + ADC10SC;
+
+	while (ADC10CTL1 & BUSY);
+	
+	value = ADC10MEM;
+	ADC10CTL0 &= ~(ENC + ADC10ON);
+	voltage = (value*2*2.5)/1023;
+	float_to_char(voltage);
+//	printf("%s\r\r /", buf);
+}
+
+
 
 void init(void){
 
@@ -42,19 +95,7 @@ void init(void){
 
 	BCSCTL1 = CALBC1_1MHZ;
 	DCOCTL = CALDCO_1MHZ;
-//	BCSCTL1 = CALBC1_16MHZ;
-//	DCOCTL = CALDCO_16MHZ;
-	//BCSCTL2 = 0;
-
-	//smclk_p14_out();
-	
-	P1DIR |= RED_LED;
-	P1OUT &= ~RED_LED;
-}
-
-void smclk_p14_out(void){
-	P1DIR |= BIT4 + BIT3; 
-	P1SEL |= BIT4; //output smclk on P1.4 for measurement
+	//P1DIR |= BIT4; P1SEL |= BIT4; //output smclk on p1.4 
 }
 
 
@@ -67,8 +108,12 @@ void main(void)
 {
 
 	init();
+//	P1DIR |= BIT1;
+//	P1SEL |= BIT1;
+	
 	init_uart();
 	intro();
+	init_adc();
 //	ow_portsetup();
 	init_sdcard();
 	rtty_init();
@@ -80,51 +125,135 @@ void main(void)
 	//$$callsign,timestamp,long,N,lat,E,alt,internal_temp,external_temp,pressure,battery_voltage
 	////<-GPGGA-><-014148.000-><-1922.4914-><-N-><-07247.4391-><-E-><-1-><-7-><-1.54-><-7.3-><-M-><--62.5->|#|
 	while(1){
-		//printf("inside while loop.. \n\r");
+				
+		// send out callsign
 
-		printf("%s", call_sign);
+		str_crc_update(call_sign);
+		printf("$$%s", call_sign);
 		log_to_sdcard(call_sign);
+		rtty_txstring("$$");
 		rtty_txstring(call_sign);
 
-//		sample_gps_data();
-		
-		if (sample_gps_data() == 0 ){
-			for(i=0;i<=9;i++){
+
+		// send out gps data
+		// UTC Time, Lat, NS indicator,long,EW indicator, fix,sats in view,HDOP,MSL Altitude
+		// 002422.00,1922.49514,N,07247.44671,E,1,04,4.58,22.0
+
+		if (sample_gps_data("GPGGA") == 0 ){
+			for(i=1;i<=9;i++){
 				
 			//	printf("->%i=", i);
-				printf("<%s>,", get_gps_string(i));
-				
+				printf("%s,", get_gps_string(i));
+
 				log_to_sdcard(get_gps_string(i));
 				log_to_sdcard(",");
 
 				rtty_txstring(get_gps_string(i));
 				rtty_txstring(",");
-
-
+				
+				str_crc_update(get_gps_string(i));
+				crc_ccitt_update(',');
 			}
+		}
+		// GPRMC
+		// UTC, status,lat,n/s,long,e/w,speed in knots,degrees,date,magnetic variation,mode
+		//,010833.00,A,1922.49496,N,07247.44335,E,0.309,,110314,,
+		if (sample_gps_data("GPRMC") == 0){
+				printf("%s,", get_gps_string(6));
+				log_to_sdcard(get_gps_string(6));
+				log_to_sdcard(",");
+
+				rtty_txstring(get_gps_string(6));
+				rtty_txstring(",");
 
 		}
+
 		
-//		rtty_txbyte(',');
+		//
+		//GPVTG
+		//Course in degrees,reference,course degrees,reference,speed in knots,units,speed in km/hr,units, mode
+		//,,T,,M,1.461,N,2.706,K,A,12,N
+		//if (sample_gps_data("GPVTG") == 0){
+		//	for(i=0;i<=10;i++){
+		//		printf("%s,", get_gps_string(i));	
+		//	}
+		//
+		//}
+		
+		//GPGSV
+		//,number of messages, message number, sats in view, satid, elevation,azimuth,snr...
+		//GPGSV,3,3,10,26,14,041,,29,66,158
+		if (sample_gps_data("GPGSV") == 0){
+			printf("%s,", get_gps_string(3));
+			log_to_sdcard(get_gps_string(3));
+			log_to_sdcard(",");
+
+			rtty_txstring(get_gps_string(3));
+			rtty_txstring(",");
+
+		}	
+
+
+	
+		//send out temperature
 		char temp_str[6];
 	    itoa(bmp085_read_temperature()/10, temp_str);	
-		printf("%s_TE,", temp_str);
+		
+		printf("%s_TI,", temp_str);
+		
 		rtty_txstring(temp_str);
-		rtty_txstring("_TE");
-		rtty_txstring(",");
-		log_to_sdcard(temp_str);
-	    
+		rtty_txstring("_TI,");
 
-		itoa(bmp085_read_pressure()/100, temp_str);
-		printf("%s_P", temp_str); 
-		//output values are in Pa. 1Pa = 0.001hPa == 0.01mbar
+		log_to_sdcard(temp_str);
+		log_to_sdcard("_TI,");
+	   
+	    str_crc_update(temp_str); 
+	    str_crc_update("_TI,"); 
+
+
+		//send out pressure 
+		itoa(bmp085_read_pressure()/100, temp_str); //output values are in Pa. 1Pa = 0.001hPa == 0.01mbar
+	
+		printf("%s_P,", temp_str); 
 		rtty_txstring(temp_str);
-		rtty_txstring("_P");
+		rtty_txstring("_P,");
+		
 		log_to_sdcard(temp_str);
+		log_to_sdcard("_P,");
 
-		rtty_txstring("\r");
+		str_crc_update(temp_str); 
+	    str_crc_update("_P,"); 
+
+
+		//send out battery voltage
+		measure_vcc();	
+		printf("%s_batt_volt,*", v_buf);
+
+		rtty_txstring(v_buf);
+		rtty_txstring("_batt_volt,*");
+		
+		log_to_sdcard(v_buf);
+		log_to_sdcard("_batt_volt,*");
+
+		str_crc_update(v_buf); 
+	    str_crc_update("_batt_volt,"); 
+
+		//send out crc
+		char s[10];
+		itoa(crc, s);
+
+		printf("%s", s);
+		
+		rtty_txstring(s);
+		
+		log_to_sdcard(s);
+
+		//terminate line
+		rtty_txstring("\n");
 		log_to_sdcard("|");
 		printf("\n\r");
+		
+		uint8_t crc = 0xffff; //reset crc
 		DELAY_MS(50);
 
 	}	
@@ -218,9 +347,10 @@ void sector_write(char *data)
 void init_sdcard(void){
 	spi_initialize();
 	while(1){//wait for sdcard to be inserted
+			printf("Attempting to initialize sdcard....");
 			if ( disk_initialize() == 0){
 				sector_idx=check_last_write();
-				printf("sdcard initialized \n\r", sector_idx);
+				printf(".. success :>\n\r", sector_idx);
 				if(sector_start(sector_idx) == 0){
 					break;
 				}else{
@@ -229,7 +359,7 @@ void init_sdcard(void){
 					continue;
 				}	
 			}else{
-				printf("disk initialization failed :<\n\r");
+				printf(".. failed :<\n\r");
 				P1OUT ^= RED_LED;
 			}
 		DELAY_MS(2000);
@@ -284,29 +414,16 @@ void log_to_sdcard(char *data)
 		bytes_written=0;
 	}
 
-
-//	printf("returning fine..\n\r");
-
 }
 
-int sample_gps_data(void){
+int sample_gps_data(char *what){
 	unsigned char c;
 	int ret;
 	int i;
 	while(c = getc()){
 		ret = parse_gps(c);
 		if(ret > 0 && ret < ( sizeof(gpi) / sizeof(gpi[0]) ) ) {
-			if(strcmp("GPGGA", gpi[ret -1].sentence) == 0){
-//<-GPGGA-><-014148.000-><-1922.4914-><-N-><-07247.4391-><-E-><-1-><-7-><-1.54-><-7.3-><-M-><--62.5->|#|
-//$$callsign,timestamp,long,N,lat,E,alt,kmpr,internal_temp,external_temp
-			
-//				for(i = 0; i < nbits(gpi[ret - 1].words); i++){
-//
-//				for(i = 1; i < 9; i++){
-//					printf("<-%s->,", get_gps_string(i));
-//					strcat(data,get_gps_string(i));
-//					if (i != 9){ strcat(data,sep); };
-//				}
+			if(strcmp(what, gpi[ret -1].sentence) == 0){
 				return 0;
 			}
 		}

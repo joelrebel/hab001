@@ -13,7 +13,6 @@ void _delay_ms(unsigned int ms)
     }
 }
 */
-
 void blink_led()
 {
 	P1OUT &= ~RED_LED;
@@ -21,6 +20,7 @@ void blink_led()
 	P1OUT |= RED_LED;
 	DELAY_MS(100);
 }
+
 
 
 
